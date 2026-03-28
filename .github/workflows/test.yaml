@@ -1,37 +1,41 @@
-#test
-name: Update GitHub Variables from JSON
-
+name: Cross-Repo Variable Sync
 on:
   workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'The repo where the JSON file is (OWNER/REPO)'
+        required: true
+        default: 'my-org/source-repo'
+      destination_repo:
+        description: 'The repo to receive the variables (OWNER/REPO)'
+        required: true
+        default: 'my-org/dest-repo'
+      json_file_path:
+        description: 'Path to the JSON file in the source repo'
+        required: true
+        default: 'vars.json'
 
 jobs:
-  update-variables:
+  sync-vars:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout Source Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          token: ${{ secrets.PAT_TOKEN }} # Use a PAT for cross-repo access
 
-    - name: Install jq (if not pre-installed)
-      run: sudo apt-get install jq
-
-    - name: Set GitHub variables from JSON file
-      env:
-        GH_TOKEN: ${{ secrets.REPO_PAT }}
-        REPO: ${{ github.repository }}
-      run: |
-        # Define the path to your JSON file
-        JSON_FILE="variables.json"
-
-        # Check if the file exists
-        if [ ! -f "$JSON_FILE" ]; then
-          echo "$JSON_FILE not found!"
-          exit 1
-        fi
-
-        # Iterate over each key-value pair in the JSON file and set the variable
-        jq -r 'to_entries[] | "\(.key)=\(.value)"' "$JSON_FILE" | while IFS="=" read -r name value; do
-          echo "Setting variable: $name"
-          # Use the gh CLI to set the variable for the current repository
-          gh variable set "$name" --body "$value" --repo "$REPO"
-        done
-
+      - name: Set Variables in Destination Repo
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }} # PAT must have 'actions:write' on destination
+        run: |
+          DEST_REPO="${{ github.event.inputs.destination_repo }}"
+          FILE_PATH="${{ github.event.inputs.json_file_path }}"
+          
+          echo "Syncing variables to $DEST_REPO..."
+          
+          # Parse JSON and set variables in the destination repository
+          jq -r 'to_entries[] | "\(.key) \(.value)"' "$FILE_PATH" | while read -r key value; do
+            echo "Setting $key in $DEST_REPO..."
+            gh variable set "$key" --body "$value" --repo "$DEST_REPO"
+          done
