@@ -1,45 +1,48 @@
-name: Cross-Repo Variable Sync
-
-permissions:
-  actions: write
-  contents: read
+name: Sync Variables to Environment
 on:
   workflow_dispatch:
     inputs:
       source_repo:
-        description: 'The repo where the JSON file is (OWNER/REPO)'
+        description: 'Source Repo (OWNER/REPO)'
         required: true
-        default: 'my-org/source-repo'
       destination_repo:
-        description: 'The repo to receive the variables (OWNER/REPO)'
+        description: 'Destination Repo (OWNER/REPO)'
         required: true
-        default: 'my-org/dest-repo'
+      target_env:
+        description: 'Select Environment'
+        required: true
+        type: choice
+        options: [dev, test, prod]
       json_file_path:
-        description: 'Path to the JSON file in the source repo'
+        description: 'JSON file path'
         required: true
         default: 'vars.json'
 
 jobs:
-  sync-vars:
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Repository
+      - name: Checkout Source
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.inputs.source_repo }}
-          token: ${{ secrets.PAT_TOKEN }} # Use a PAT for cross-repo access
+          token: ${{ secrets.CROSS_REPO_PAT }}
 
-      - name: Set Variables in Destination Repo
+      - name: Ensure Environment and Set Variables
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }} # PAT must have 'actions:write' on destination
+          GH_TOKEN: ${{ secrets.CROSS_REPO_PAT }}
         run: |
-          DEST_REPO="${{ github.event.inputs.destination_repo }}"
-          FILE_PATH="${{ github.event.inputs.json_file_path }}"
-          
-          echo "Syncing variables to $DEST_REPO..."
-          
-          # Parse JSON and set variables in the destination repository
-          jq -r 'to_entries[] | "\(.key) \(.value)"' "$FILE_PATH" | while read -r key value; do
-            echo "Setting $key in $DEST_REPO..."
-            gh variable set "$key" --body "$value" --repo "$DEST_REPO"
+          DEST="${{ github.event.inputs.destination_repo }}"
+          ENV="${{ github.event.inputs.target_env }}"
+          FILE="${{ github.event.inputs.json_file_path }}"
+
+          # 1. Ensure the environment exists (ignores error if already exists)
+          echo "Checking environment: $ENV in $DEST..."
+          gh api -X PUT "repos/$DEST/environments/$ENV" --silent || echo "Environment already exists or created."
+
+          # 2. Iterate and update variables
+          jq -r 'to_entries[] | "\(.key) \(.value)"' "$FILE" | while read -r key value; do
+            echo "Updating/Creating $key in $ENV..."
+            # 'gh variable set' updates existing keys by default
+            gh variable set "$key" --body "$value" --repo "$DEST" --env "$ENV"
           done
