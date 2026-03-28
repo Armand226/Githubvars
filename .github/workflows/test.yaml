@@ -1,4 +1,8 @@
 name: Cross-Repo Variable Sync
+
+permissions:
+  actions: write
+  contents: read
 on:
   workflow_dispatch:
     inputs:
