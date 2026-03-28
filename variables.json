@@ -1,22 +1,12 @@
 {
-  "Variables": [
-    {
-      "Name": "HostName",
-      "Value": "someDevHostName",
-      "Scope": {
-        "Environment": [
-          "Dev"
-        ]
-      }
-    },
-    {
-      "Name": "HostName",
-      "Value": "someDevTestHostName",
-      "Scope": {
-        "Environment": [
-          "Dev"
-        ]
-      }
-    }
-  ]
+  "APP_NAME": "InventoryManager",
+  "API_VERSION": "v2.1",
+  "DB_PORT": "5432",
+  "LOG_LEVEL": "info",
+  "TIMEOUT_MS": "5000",
+  "RETRY_LIMIT": "3",
+  "THEME_COLOR": "cobalt-blue",
+  "MAINTENANCE_MODE": "false",
+  "CACHE_TTL": "3600",
+  "SUPPORT_EMAIL": "ops@example.com"
 }
