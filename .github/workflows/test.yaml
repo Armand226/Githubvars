@@ -1,1 +1,37 @@
 #test
+name: Update GitHub Variables from JSON
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-variables:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install jq (if not pre-installed)
+      run: sudo apt-get install jq
+
+    - name: Set GitHub variables from JSON file
+      env:
+        GH_TOKEN: ${{ secrets.REPO_PAT }}
+        REPO: ${{ github.repository }}
+      run: |
+        # Define the path to your JSON file
+        JSON_FILE="variables.json"
+
+        # Check if the file exists
+        if [ ! -f "$JSON_FILE" ]; then
+          echo "$JSON_FILE not found!"
+          exit 1
+        fi
+
+        # Iterate over each key-value pair in the JSON file and set the variable
+        jq -r 'to_entries[] | "\(.key)=\(.value)"' "$JSON_FILE" | while IFS="=" read -r name value; do
+          echo "Setting variable: $name"
+          # Use the gh CLI to set the variable for the current repository
+          gh variable set "$name" --body "$value" --repo "$REPO"
+        done
+
