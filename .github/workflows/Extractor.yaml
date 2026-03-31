@@ -1,0 +1,46 @@
+name: Pull Variables from Environment
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'Source Repo (OWNER/REPO)'
+        required: true
+      source_env:
+        description: 'Select Environment to pull from'
+        required: true
+        type: choice
+        options: [dev, test, prod]
+      output_json_path:
+        description: 'Path to save JSON file'
+        required: true
+        default: 'pulled_vars.json'
+
+jobs:
+  pull-vars:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch and Format Variables
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          REPO="${{ github.event.inputs.source_repo }}"
+          ENV="${{ github.event.inputs.source_env }}"
+          FILE="${{ github.event.inputs.output_json_path }}"
+
+          echo "Fetching variables from $REPO ($ENV)..."
+          
+          # Pull variables and transform list into a simple Key-Value JSON object
+          gh variable list --repo "$REPO" --env "$ENV" --json name,value \
+          | jq 'reduce .[] as $item ({}; .[$item.name] = $item.value)' > "$FILE"
+
+          echo "Variables saved to $FILE:"
+          cat "$FILE"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-variables
+          path: ${{ github.event.inputs.output_json_path }}
