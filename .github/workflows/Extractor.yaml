@@ -31,11 +31,10 @@ jobs:
           REPO="${{ github.event.inputs.source_repo }}"
           ENV="${{ github.event.inputs.source_env }}"
           FILE="${{ github.event.inputs.output_json_path }}"
-
-          # Pull variables and transform into Key-Value JSON
-          gh variable list --repo "$REPO" --env "$ENV" --json name,value \
-
-          | jq 'reduce .[] as $item ({}; .[$item.name] = $item.value)' > "$FILE"
+          
+          # Move the pipe to the end of the line for better reliability
+          gh variable list --repo "$REPO" --env "$ENV" --json name,value | \
+          jq 'reduce .[] as $item ({}; .[$item.name] = $item.value)' > "$FILE"
 
       - name: Create artifacts pull request
         uses: peter-evans/create-pull-request@v6
