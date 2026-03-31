@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Fetch and Format Variables
         env:
@@ -30,17 +32,18 @@ jobs:
           ENV="${{ github.event.inputs.source_env }}"
           FILE="${{ github.event.inputs.output_json_path }}"
 
-          echo "Fetching variables from $REPO ($ENV)..."
-          
-          # Pull variables and transform list into a simple Key-Value JSON object
+          # Pull variables and transform into Key-Value JSON
           gh variable list --repo "$REPO" --env "$ENV" --json name,value \
+
           | jq 'reduce .[] as $item ({}; .[$item.name] = $item.value)' > "$FILE"
 
-          echo "Variables saved to $FILE:"
-          cat "$FILE"
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Create artifacts pull request
+        uses: peter-evans/create-pull-request@v6
         with:
-          name: environment-variables
-          path: ${{ github.event.inputs.output_json_path }}
+          token: ${{ secrets.PAT_TOKEN }}
+          commit-message: "feat(extract): update artifacts"
+          branch: feat/extract-${{ github.run_number }}
+          title: "feat(extract): update artifacts"
+          body: "This PR contains the extracted variables from ${{ github.event.inputs.source_repo }} for the ${{ github.event.inputs.source_env }} environment."
+          add-paths: |
+            ${{ github.event.inputs.output_json_path }}
