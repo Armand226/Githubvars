@@ -1,0 +1,12 @@
+{
+  "API_VERSION": "v2.1",
+  "APP_NAME": "InventoryManager",
+  "CACHE_TTL": "3600",
+  "DB_PORT": "5432",
+  "LOG_LEVEL": "info",
+  "MAINTENANCE_MODE": "false",
+  "RETRY_LIMIT": "3",
+  "SUPPORT_EMAIL": "ops@example.com",
+  "THEME_COLOR": "cobalt-blue",
+  "TIMEOUT_MS": "5000"
+}
