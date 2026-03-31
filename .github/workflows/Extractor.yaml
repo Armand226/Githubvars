@@ -14,6 +14,9 @@ on:
         description: 'Path to save JSON file'
         required: true
         default: 'pulled_vars.json'
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   pull-vars:
